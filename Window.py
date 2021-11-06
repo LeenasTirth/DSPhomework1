@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+from gate import get_new_lists
+
+
 class Frame_Window:
     def __init__(self):
         pass
@@ -48,7 +51,7 @@ class Frame_Window:
         :param data_list:传入一个一维numpy数组，是没有分帧之前的信号序列
         :param frame_long:帧的长度
         :param method:选择使用哪一种窗函数
-        :return:返回一个分帧加窗后的列表，是一个二维列表，每一个元素是一个列表，是一帧。
+        :return:返回一个分帧加窗后的列表，是一个二维列表，每一个元素是一个列表，是一帧。即：[[....],[....],....]
         '''
         frame_list = []
         frame_move = int(frame_long * 0.75)
@@ -96,12 +99,52 @@ class Frame_Window:
         hailing_window = 0.5 * (1 - np.cos(2 * np.pi * hailing_window / (len(seq) - 1)))
         return seq * hailing_window
 
+    def GetFeature(self, energy_list, magnitude_list, zerorate_list, length=100,weight = None):
+        '''
+
+        :param energy_list: 能量序列
+        :param magnitude_list: 幅度序列
+        :param zerorate_list: 过零率序列
+        :param length: 取序列起始的 length 个
+        :param weight: 每个序列的加权系数
+        :return: 3*length维度的特征
+        '''
+        delta = 1e-15#防止除以0
+        if weight is None:
+            weight=[0.3, 0.3, 0.3]
+        weight = np.array(weight)
+        weight = weight/(weight.sum())
+
+        energy = np.array(energy_list)
+        energy = (energy-energy.mean())/(energy.std()+delta)*weight[0]
+        energy = energy.tolist()
+        magnitude = np.array(magnitude_list)
+        magnitude = (magnitude-magnitude.mean())/(magnitude.std()+delta)*weight[1]
+        magnitude = magnitude.tolist()
+        zerorate = np.array(zerorate_list)
+        zerorate = (zerorate-zerorate.mean())/(zerorate.std()+delta)*weight[2]
+        zerorate = zerorate.tolist()
+
+
+        return [energy[:length], magnitude[:length], zerorate[:length]]
+
 
 if __name__ == '__main__':
+    # Step1:实例化Frame_Window对象
     w = Frame_Window()
     seq = np.ones((1000,))
+    # Step2:调用devide_frame，传入序列，进行分帧加窗,frame_long是帧长度，method是选择哪种窗函数
     s = w.devide_frame(seq, frame_long=200, method=2)
+    # Step3:调用TimeAnalyze函数，传入Step2中返回的变量（帧的列表），返回三个列表，分别是每一帧的：能量，幅度和过零率
     energy_list, magnitude_list, zerorate_list = w.TimeAnalyze(s)
-    print(energy_list)
-    print(magnitude_list)
-    print(zerorate_list)
+    # Step4:实例化对象，其中的3和2是可选参数，3就是过零率阈值的缩放值scale_pass_zero，也就是该阈值等于过零率的均值除以3，需要传入前面得到的三个列表
+    Gate = get_new_lists(energy_list, magnitude_list, zerorate_list, 3, 2)
+    # Step5:此处即为所需的切分后的能量序列以及过零率序列
+    new_energy, new_aver_amplitude_list,new_pass_zero = Gate.get_lists()
+    # Step6:传入三个序列列表，返回一个3*length维度的特征。length指的是从这三个列表的起始位置开始，取多少个元素作为定长特征；weight是给三个序列的加权。
+    feature = w.GetFeature(new_energy, new_aver_amplitude_list,new_pass_zero,length=100,weight=[0.3,0.3,0.3])
+
+    print(feature)
+    # print(energy_list)
+    # print(magnitude_list)
+    # print(zerorate_list)
