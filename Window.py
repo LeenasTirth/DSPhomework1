@@ -117,16 +117,16 @@ class Frame_Window:
 
         energy = np.array(energy_list)
         energy = (energy-energy.mean())/(energy.std()+delta)*weight[0]
-        energy = energy.tolist()
+        #energy = energy.tolist()
         magnitude = np.array(magnitude_list)
         magnitude = (magnitude-magnitude.mean())/(magnitude.std()+delta)*weight[1]
-        magnitude = magnitude.tolist()
+        #magnitude = magnitude.tolist()
         zerorate = np.array(zerorate_list)
         zerorate = (zerorate-zerorate.mean())/(zerorate.std()+delta)*weight[2]
-        zerorate = zerorate.tolist()
+        #zerorate = zerorate.tolist()
+        ans = np.hstack((energy[:length],magnitude[:length],zerorate[:length])).tolist()
 
-
-        return [energy[:length], magnitude[:length], zerorate[:length]]
+        return ans
 
 
 if __name__ == '__main__':
